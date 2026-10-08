@@ -48,6 +48,19 @@
 
   --ease: cubic-bezier(.2, 0, .38, .9);
   --dur:  240ms;
+
+  /* появление текста по словам */
+  --stream-gap:   58ms;
+  --stream-fade:  380ms;
+  --stream-blur:  2px;
+  --stream-ease:  cubic-bezier(.22, 1, .36, 1);
+
+  /* построчное появление со сдвигом */
+  --stagger-dur:      520ms;
+  --stagger-distance: 12px;
+  --stagger-step:     55ms;
+  --stagger-blur:     3px;
+  --stagger-ease:     cubic-bezier(.22, 1, .36, 1);
 }
 
 /* ------------------------------- базовое --------------------------------- */
@@ -1100,8 +1113,53 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
 }
 .js-reveal .reveal.is-in { opacity: 1; transform: none; }
 
+/* Блоки с собственной анимацией текста внутри только гаснут, без сдвига —
+   иначе движение контейнера складывается с движением строк. */
+.js-reveal .project.reveal,
+.js-reveal .contacts.reveal { transform: none; }
+
+/* ---------------------- появление текста по словам ------------------------ */
+/* Слова оборачивает JS; индекс слова кладётся в --i и задаёт задержку. */
+.js-reveal .t-stream-w {
+  display: inline-block;
+  opacity: 0;
+  filter: blur(var(--stream-blur));
+  transition:
+    opacity var(--stream-fade) var(--stream-ease),
+    filter var(--stream-fade) var(--stream-ease);
+  transition-delay: calc(var(--d, 0ms) + var(--stream-gap) * var(--i, 0));
+}
+.js-reveal .t-stream.is-shown .t-stream-w {
+  opacity: 1;
+  filter: blur(0);
+}
+
+/* ------------------- появление строк со сдвигом (стаггер) ----------------- */
+.js-reveal .t-stagger-line {
+  opacity: 0;
+  transform: translateY(var(--stagger-distance));
+  filter: blur(var(--stagger-blur));
+  transition:
+    opacity var(--stagger-dur) var(--stagger-ease),
+    transform var(--stagger-dur) var(--stagger-ease),
+    filter var(--stagger-dur) var(--stagger-ease);
+  transition-delay: calc(var(--d, 0ms) + var(--stagger-step) * var(--i, 0));
+}
+.js-reveal .t-stagger.is-shown .t-stagger-line {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .js-reveal .reveal { opacity: 1; transform: none; }
+  .js-reveal .reveal,
+  .js-reveal .t-stream-w,
+  .js-reveal .t-stagger-line {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
 }
 
 /* ================================ адаптив ================================= */
@@ -1216,6 +1274,10 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
   .fact__val, .spec__row dd, .job__list--accent li { color: #161616; }
   .section, .section--alt { background: #fff; border: 0; padding-block: 16px; }
   .job, .edu__item, .card, .chip, .project { break-inside: avoid; }
-  .js-reveal .reveal { opacity: 1 !important; transform: none !important; }
+  .js-reveal .reveal,
+  .js-reveal .t-stream-w,
+  .js-reveal .t-stagger-line {
+    opacity: 1 !important; transform: none !important; filter: none !important;
+  }
   a { color: #0f62fe; }
 }

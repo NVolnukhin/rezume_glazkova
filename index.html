@@ -23,6 +23,22 @@
      Таблица со шрифтами идёт первой, чтобы они начали грузиться раньше вёрстки. -->
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <link rel="stylesheet" href="assets/css/style.css">
+
+<script>
+  /* Ставим флаг до первой отрисовки: иначе анимируемый текст успеет мигнуть.
+     Если модуль не запустился (старый браузер, сбой сети) — через 3 с
+     флаг снимается и страница показывает всё как есть. */
+  (function () {
+    var root = document.documentElement;
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    } catch (e) { return; }
+    root.classList.add('js-reveal');
+    setTimeout(function () {
+      if (!root.dataset.revealReady) root.classList.remove('js-reveal');
+    }, 3000);
+  })();
+</script>
 </head>
 
 <body>
@@ -70,12 +86,12 @@
           <span class="eyebrow__item" data-today-iso>7 октября 2026</span>
         </p>
 
-        <h1 class="hero__name">
-          <span class="hero__first">Мария</span>
-          <span class="hero__last">Глазкова</span>
+        <h1 class="hero__name t-stagger">
+          <span class="hero__first t-stagger-line">Мария</span>
+          <span class="hero__last t-stagger-line">Глазкова</span>
         </h1>
 
-        <p class="hero__role">Инженер-проектировщик&nbsp;BIM</p>
+        <p class="hero__role t-stream" style="--d: 360ms">Инженер-проектировщик&nbsp;BIM</p>
 
         <p class="hero__lead">
           Проектирую объекты премиум-сегмента под ключ — хаммамы, сауны, души впечатлений
@@ -128,7 +144,7 @@
                width="853" height="1280"
                alt="Портрет Марии Глазковой" fetchpriority="high" decoding="async">
         </div>
-        <figcaption class="portrait__caption">
+        <figcaption class="portrait__caption t-stream" style="--d: 620ms">
           <span class="mono">ГЛАЗКОВА М. А.</span>
           <span class="mono portrait__code">ПГС · BIM · ОВиК/ВК/ЭО</span>
         </figcaption>
@@ -473,14 +489,14 @@
       </header>
 
       <div class="contacts">
-        <div class="contacts__main">
-          <p class="contacts__hint mono">Предпочитаемый способ связи</p>
-          <a class="contacts__phone" href="tel:+79773022809">+7 (977) 302-28-09</a>
-          <p class="contacts__note">
+        <div class="contacts__main t-stagger">
+          <p class="contacts__hint mono t-stagger-line">Предпочитаемый способ связи</p>
+          <a class="contacts__phone t-stagger-line" href="tel:+79773022809">+7 (977) 302-28-09</a>
+          <p class="contacts__note t-stagger-line">
             Москва, м.&nbsp;Крылатское. Готова к работе на месте работодателя,
             в гибридном формате и удалённо.
           </p>
-          <div class="contacts__actions">
+          <div class="contacts__actions t-stagger-line">
             <a class="btn btn--primary" href="tel:+79773022809">Позвонить</a>
             <a class="btn btn--ghost" href="assets/rezume-glazkova-ma.pdf" download>Скачать резюме</a>
           </div>

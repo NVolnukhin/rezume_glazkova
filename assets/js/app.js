@@ -201,14 +201,14 @@ function buildProjectCard(project) {
       <span class="project__index">${project.index}</span>
       <span class="project__sheets">${sheets} ${plural(sheets, 'лист', 'листа', 'листов')}</span>
     </div>
-    <div class="project__body">
-      <p class="project__meta">
+    <div class="project__body t-stagger">
+      <p class="project__meta t-stagger-line">
         <span>${project.org}</span><span>${project.year}</span><span>${project.kind}</span>
       </p>
-      <h3 class="project__title">${project.title}</h3>
-      <p class="project__stage">${project.stage} · ${project.section}</p>
-      <p class="project__summary">${project.summary}</p>
-      <ul class="project__tags">
+      <h3 class="project__title t-stagger-line">${project.title}</h3>
+      <p class="project__stage t-stagger-line">${project.stage} · ${project.section}</p>
+      <p class="project__summary t-stagger-line">${project.summary}</p>
+      <ul class="project__tags t-stagger-line">
         ${project.tags.map((t) => `<li class="project__tag">${t}</li>`).join('')}
       </ul>
     </div>
@@ -284,6 +284,70 @@ function prefetchViewer() {
  *  Появление блоков при прокрутке
  * ------------------------------------------------------------------ */
 
+/**
+ * Разбивает текст внутри элемента на слова в отдельных span-ах
+ * и нумерует их через --i: задержку дальше считает CSS.
+ * Пробелы остаются обычными текстовыми узлами, поэтому переносы
+ * строк и неразрывные пробелы работают как раньше.
+ */
+function splitIntoWords(root) {
+  if (root.dataset.streamReady) return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  const words = [];
+  for (const node of textNodes) {
+    if (!node.nodeValue.trim()) continue;
+    const frag = document.createDocumentFragment();
+    for (const chunk of node.nodeValue.split(/(\s+)/)) {
+      if (!chunk) continue;
+      if (!chunk.trim()) {
+        frag.append(chunk);
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = 't-stream-w';
+      span.textContent = chunk;
+      frag.append(span);
+      words.push(span);
+    }
+    node.replaceWith(frag);
+  }
+
+  words.forEach((word, i) => word.style.setProperty('--i', String(i)));
+  root.dataset.streamReady = '1';
+}
+
+/** Проставляет строкам порядковый номер — его читает transition-delay. */
+function prepareStagger(root) {
+  if (root.dataset.staggerReady) return;
+  root.querySelectorAll(':scope > .t-stagger-line').forEach((line, i) => {
+    line.style.setProperty('--i', String(i));
+  });
+  root.dataset.staggerReady = '1';
+}
+
+/** Запускает анимации текста внутри блока (и на нём самом). */
+function playTextIn(root) {
+  const pick = (selector) => {
+    const list = [...root.querySelectorAll(selector)];
+    if (root.matches && root.matches(selector)) list.unshift(root);
+    return list;
+  };
+
+  pick('.t-stagger').forEach((el) => {
+    prepareStagger(el);
+    el.classList.add('is-shown');
+  });
+
+  pick('.t-stream').forEach((el) => {
+    splitIntoWords(el);
+    el.classList.add('is-shown');
+  });
+}
+
 function initReveal() {
   const targets = [...document.querySelectorAll(
     '.sec-head, .about, .job, .card, .software, .project, .edu__item, .contacts, .metric'
@@ -293,20 +357,33 @@ function initReveal() {
   const reveal = (el, delay = 0) => {
     el.style.transitionDelay = delay ? `${delay}ms` : '';
     el.classList.add('is-in');
+    playTextIn(el);
   };
-  const revealAll = () => targets.forEach((el) => reveal(el));
+  const revealAll = () => {
+    targets.forEach((el) => reveal(el));
+    playTextIn(document.body);
+  };
+  const root = document.documentElement;
 
   // Анимация отключена настройками системы или браузер без IntersectionObserver —
-  // показываем всё сразу, содержимое не должно зависеть от анимации.
+  // снимаем флаг, поставленный в <head>, и показываем всё сразу:
+  // содержимое не должно зависеть от анимации.
   if (
     window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
     typeof IntersectionObserver !== 'function'
   ) {
+    root.classList.remove('js-reveal');
+    root.dataset.revealReady = '1';
     return;
   }
 
-  document.documentElement.classList.add('js-reveal');
+  root.classList.add('js-reveal');
+  root.dataset.revealReady = '1';
   targets.forEach((el) => el.classList.add('reveal'));
+
+  // Шапка видна сразу — её текст запускаем без ожидания прокрутки.
+  const hero = document.querySelector('.hero');
+  if (hero) requestAnimationFrame(() => playTextIn(hero));
 
   const io = new IntersectionObserver(
     (entries) => {
@@ -322,12 +399,18 @@ function initReveal() {
 
   // Страховка: что бы ни случилось с наблюдателем, текст не останется скрытым.
   setTimeout(() => {
-    if (targets.some((el) => !el.classList.contains('is-in'))) {
-      const stillHidden = targets.filter(
-        (el) => !el.classList.contains('is-in') && el.getBoundingClientRect().top < window.innerHeight
-      );
-      stillHidden.forEach((el) => reveal(el));
-    }
+    targets
+      .filter((el) => !el.classList.contains('is-in')
+        && el.getBoundingClientRect().top < window.innerHeight)
+      .forEach((el) => reveal(el));
+
+    // Разблокируем только то, что уже на экране, — анимации ниже по странице
+    // должны дождаться прокрутки.
+    document
+      .querySelectorAll('.t-stream:not(.is-shown), .t-stagger:not(.is-shown)')
+      .forEach((el) => {
+        if (el.getBoundingClientRect().top < window.innerHeight) playTextIn(el);
+      });
   }, 2500);
 
   window.addEventListener('pagehide', revealAll);
