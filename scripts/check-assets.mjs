@@ -66,6 +66,30 @@ for (const file of ['assets/vendor/pdfjs/pdf.min.mjs', 'assets/vendor/pdfjs/pdf.
 /* 5. .nojekyll — иначе Pages проигнорирует часть путей */
 if (!existsSync(join(ROOT, '.nojekyll'))) errors.push('нет файла .nojekyll в корне');
 
+/* 6. Свой домен.
+   Публикуемся своим Actions-воркфлоу, а не из ветки, поэтому GitHub не создаёт
+   CNAME сам — файл лежит в репозитории руками, и потерять его легко.
+   Заодно сверяем домен с абсолютными ссылками в мета-тегах: разъехавшийся
+   og:image ломает превью молча, без ошибок в консоли. */
+let domain = null;
+if (!existsSync(join(ROOT, 'CNAME'))) {
+  errors.push('нет файла CNAME в корне — свой домен отвалится на ближайшем деплое');
+} else {
+  const lines = readFileSync(join(ROOT, 'CNAME'), 'utf8').trim().split('\n');
+  domain = lines[0].trim();
+  if (lines.length !== 1 || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) {
+    errors.push(`CNAME должен содержать ровно одно доменное имя, а там: ${JSON.stringify(domain)}`);
+  }
+}
+
+for (const m of html.matchAll(/(?:content|href)="https:\/\/([a-z0-9.-]+)(\/[^"]*)?"/gi)) {
+  const [, host, path = '/'] = m;
+  if (domain && host !== domain) {
+    errors.push(`index.html ссылается на https://${host}${path}, а в CNAME домен ${domain}`);
+  }
+  if (path !== '/') must(path.slice(1), 'index.html, абсолютная ссылка');
+}
+
 if (errors.length) {
   console.error('✗ Проверка не пройдена:\n' + errors.map((e) => `  · ${e}`).join('\n'));
   process.exit(1);
@@ -73,5 +97,5 @@ if (errors.length) {
 
 console.log(
   `✓ Проверка пройдена: ${PROJECTS.length} проектов, ${TOTAL_SHEETS} листов, ` +
-  `${checked.size} путей на месте.`
+  `${checked.size} путей на месте, домен ${domain}.`
 );
