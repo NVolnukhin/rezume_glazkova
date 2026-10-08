@@ -32,8 +32,11 @@ const S = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="
 const ICONS = {
   minus: `<svg viewBox="0 0 24 24" ${S}><path d="M5 12h14"/></svg>`,
   plus: `<svg viewBox="0 0 24 24" ${S}><path d="M12 5v14M5 12h14"/></svg>`,
-  fit: `<svg viewBox="0 0 24 24" ${S}><path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/></svg>`,
+  // Три глифа должны читаться по отдельности: «вписать» — лист внутри экрана,
+  // «на весь экран» — уголки наружу, «выйти» — уголки внутрь.
+  fit: `<svg viewBox="0 0 24 24" ${S}><rect x="3" y="5" width="18" height="14"/><rect x="7.5" y="9" width="9" height="6"/></svg>`,
   full: `<svg viewBox="0 0 24 24" ${S}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>`,
+  fullExit: `<svg viewBox="0 0 24 24" ${S}><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>`,
   prev: `<svg viewBox="0 0 24 24" ${S}><path d="M15 5l-7 7 7 7"/></svg>`,
   next: `<svg viewBox="0 0 24 24" ${S}><path d="M9 5l7 7-7 7"/></svg>`,
   close: `<svg viewBox="0 0 24 24" ${S}><path d="M6 6l12 12M18 6L6 18"/></svg>`,
@@ -214,6 +217,8 @@ function updateZoomLabel() {
   ui.zoomValue.textContent = `${pct}%`;
   ui.zoomOut.disabled = state.scale <= state.fitScale * 0.6 + 1e-6;
   ui.zoomIn.disabled = state.scale >= state.fitScale * MAX_ZOOM_FACTOR - 1e-6;
+  // Лист уже вписан — гасим кнопку, чтобы она не выглядела сломанной.
+  ui.fit.disabled = Math.abs(state.scale - state.fitScale) < state.fitScale * 1e-3;
 }
 
 /* ------------------------------ отрисовка ------------------------------ */
@@ -611,6 +616,17 @@ function bindEvents(el) {
     else if (el.root.requestFullscreen) el.root.requestFullscreen().catch(() => {});
   });
   if (!document.documentElement.requestFullscreen) el.full.hidden = true;
+
+  // В полноэкранном режиме кнопка меняет смысл — должна менять и вид.
+  const syncFullscreen = () => {
+    const active = document.fullscreenElement === el.root;
+    el.full.innerHTML = active ? ICONS.fullExit : ICONS.full;
+    el.full.title = active ? 'Выйти из полноэкранного режима (F)' : 'На весь экран (F)';
+    el.full.setAttribute('aria-label', active ? 'Выйти из полноэкранного режима' : 'На весь экран');
+    el.full.classList.toggle('is-active', active);
+  };
+  document.addEventListener('fullscreenchange', syncFullscreen);
+  document.addEventListener('webkitfullscreenchange', syncFullscreen);
 
   /* --- колесо --- */
   el.stage.addEventListener('wheel', (e) => {
