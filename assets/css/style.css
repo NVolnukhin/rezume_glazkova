@@ -540,9 +540,12 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
 .job__list--accent li::before { background: var(--accent); }
 
 /* ----------------------------- компетенции ------------------------------- */
+/* Разделители нарисованы фоном контейнера сквозь зазор в 1px, поэтому число
+   колонок должно нацело делить число карточек — иначе пустые ячейки последнего
+   ряда закрашиваются и читаются как пустой блок. Карточек 6: 3 / 2 / 1. */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   background: var(--line-soft);
   border: 1px solid var(--line-soft);
@@ -591,20 +594,26 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
   margin-bottom: var(--sp-4);
   border-bottom: 1px solid var(--line);
 }
+/* Программ пять — любое фиксированное число колонок оставило бы дыру в сетке,
+   поэтому здесь не сетка, а ряд плашек со своей рамкой: переносится на любой
+   ширине и всегда прижат влево. */
 .software__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 1px;
-  background: var(--line-soft);
-  border: 1px solid var(--line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
 }
 .chip {
+  flex: 0 1 auto;
+  min-width: 0;
   background: var(--bg);
-  padding: var(--sp-4);
+  border: 1px solid var(--line);
+  padding: var(--sp-3) var(--sp-4);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
+.chip:hover { border-color: var(--line-strong); background: var(--layer-02); }
 .section--alt .chip { background: var(--layer-01); }
 .chip b { font-weight: 500; color: var(--text-01); font-size: .9375rem; }
 .chip span {
@@ -816,30 +825,13 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
 /* -------------------------------- подвал --------------------------------- */
 .site-footer { border-top: 1px solid var(--line); background: var(--layer-01); }
 
-.footer-block {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr));
-  border-bottom: 1px solid var(--line-soft);
-}
-.footer-block__cell {
-  padding: var(--sp-5) var(--sp-4) var(--sp-5) 0;
-  border-left: 1px solid var(--line-soft);
-  padding-left: var(--sp-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  min-width: 0;
-}
-.footer-block__cell:first-child { border-left: 0; padding-left: 0; }
-.footer-block__key { color: var(--text-04); }
-.footer-block__val { color: var(--text-01); font-size: .9375rem; }
 
 .site-footer__legal {
   display: flex;
   justify-content: space-between;
   gap: var(--sp-4);
   flex-wrap: wrap;
-  padding-block: var(--sp-5);
+  padding-block: var(--sp-6);
   color: var(--text-04);
 }
 .site-footer__legal p { margin: 0; }
@@ -1116,9 +1108,8 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
 
 @media (max-width: 1056px) {
   .hero__inner { grid-template-columns: minmax(0, 1fr) clamp(220px, 32vw, 300px); }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .about, .contacts { grid-template-columns: minmax(0, 1fr); }
-  .footer-block { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .footer-block__cell:nth-child(3) { border-left: 0; padding-left: 0; }
 }
 
 @media (max-width: 860px) {
@@ -1157,6 +1148,9 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
 
 @media (max-width: 672px) {
   html { scroll-padding-top: 72px; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .card__title { min-height: 0; }
+  .chip { flex: 1 1 100%; }
   .sec-head { grid-template-columns: auto minmax(0, 1fr); }
   .sec-head__meta { grid-column: 1 / -1; text-align: left; }
   .spec__row, .fact { grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -1177,9 +1171,6 @@ main, .site-header, .site-footer { position: relative; z-index: 1; }
   .metrics__grid { grid-template-columns: minmax(0, 1fr); }
   .metric { border-left: 0; }
   .metric:not(:first-child) { border-top: 1px solid var(--line-soft); }
-  .footer-block { grid-template-columns: minmax(0, 1fr); }
-  .footer-block__cell { border-left: 0; padding-left: 0; padding-block: var(--sp-4); border-top: 1px solid var(--line-soft); }
-  .footer-block__cell:first-child { border-top: 0; }
   .hero__actions .btn, .contacts__actions .btn { width: 100%; justify-content: center; }
   .viewer__counter { min-width: 72px; font-size: .6875rem; }
   .zoom-group__value { min-width: 50px; }
