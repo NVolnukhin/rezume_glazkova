@@ -334,18 +334,22 @@ function playTextIn(root) {
   const pick = (selector) => {
     const list = [...root.querySelectorAll(selector)];
     if (root.matches && root.matches(selector)) list.unshift(root);
-    return list;
+    return list.filter((el) => !el.classList.contains('is-shown'));
   };
 
-  pick('.t-stagger').forEach((el) => {
-    prepareStagger(el);
-    el.classList.add('is-shown');
-  });
+  const staggers = pick('.t-stagger');
+  const streams = pick('.t-stream');
+  if (!staggers.length && !streams.length) return;
 
-  pick('.t-stream').forEach((el) => {
-    splitIntoWords(el);
-    el.classList.add('is-shown');
-  });
+  staggers.forEach(prepareStagger);
+  streams.forEach(splitIntoWords);
+
+  // Слова создаются прямо сейчас: без принудительного пересчёта стилей
+  // браузер применит к ним сразу конечное состояние и перехода не будет.
+  void document.body.offsetWidth;
+
+  staggers.forEach((el) => el.classList.add('is-shown'));
+  streams.forEach((el) => el.classList.add('is-shown'));
 }
 
 function initReveal() {
@@ -382,8 +386,10 @@ function initReveal() {
   targets.forEach((el) => el.classList.add('reveal'));
 
   // Шапка видна сразу — её текст запускаем без ожидания прокрутки.
+  // Намеренно без requestAnimationFrame: в фоновой вкладке кадры не идут,
+  // и анимация не стартовала бы до переключения на неё.
   const hero = document.querySelector('.hero');
-  if (hero) requestAnimationFrame(() => playTextIn(hero));
+  if (hero) playTextIn(hero);
 
   const io = new IntersectionObserver(
     (entries) => {
