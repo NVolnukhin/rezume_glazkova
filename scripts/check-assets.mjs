@@ -90,6 +90,60 @@ for (const m of html.matchAll(/(?:content|href)="https:\/\/([a-z0-9.-]+)(\/[^"]*
   if (path !== '/') must(path.slice(1), 'index.html, абсолютная ссылка');
 }
 
+/* 7. Файлы для поисковых систем */
+for (const file of ['robots.txt', 'sitemap.xml']) {
+  if (!existsSync(join(ROOT, file))) errors.push(`нет файла ${file} в корне`);
+}
+if (domain) {
+  const robots = existsSync(join(ROOT, 'robots.txt'))
+    ? readFileSync(join(ROOT, 'robots.txt'), 'utf8') : '';
+  if (!robots.includes(`https://${domain}/sitemap.xml`)) {
+    errors.push(`robots.txt не ссылается на https://${domain}/sitemap.xml`);
+  }
+  const sitemap = existsSync(join(ROOT, 'sitemap.xml'))
+    ? readFileSync(join(ROOT, 'sitemap.xml'), 'utf8') : '';
+  if (!sitemap.includes(`<loc>https://${domain}/</loc>`)) {
+    errors.push(`sitemap.xml не содержит https://${domain}/`);
+  }
+}
+
+/* 8. Микроразметка: должна парситься и ссылаться на тот же домен.
+   Битый JSON-LD поисковик молча игнорирует, поэтому проверяем сами. */
+const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+if (!ldMatch) {
+  errors.push('index.html: нет блока JSON-LD с микроразметкой');
+} else {
+  let ld;
+  try {
+    ld = JSON.parse(ldMatch[1]);
+  } catch (e) {
+    errors.push(`index.html: JSON-LD не парсится — ${e.message}`);
+  }
+  if (ld) {
+    const urls = [];
+    (function walk(node) {
+      if (typeof node === 'string') {
+        if (node.startsWith('https://')) urls.push(node);
+      } else if (Array.isArray(node)) {
+        node.forEach(walk);
+      } else if (node && typeof node === 'object') {
+        Object.values(node).forEach(walk);
+      }
+    })(ld);
+
+    for (const u of urls) {
+      const { host, pathname } = new URL(u);
+      if (host === 'schema.org') continue;
+      if (domain && host !== domain) {
+        errors.push(`JSON-LD ссылается на https://${host}${pathname}, а в CNAME домен ${domain}`);
+      }
+      if (/\.(webp|png|jpe?g|svg|pdf)$/i.test(pathname)) {
+        must(pathname.slice(1), 'JSON-LD');
+      }
+    }
+  }
+}
+
 if (errors.length) {
   console.error('✗ Проверка не пройдена:\n' + errors.map((e) => `  · ${e}`).join('\n'));
   process.exit(1);

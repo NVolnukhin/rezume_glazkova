@@ -42,6 +42,15 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
+      # Единственная правка перед публикацией: дата в sitemap должна
+      # соответствовать реальному обновлению сайта, иначе поисковики
+      # перестают ей доверять.
+      - name: Проставить дату в sitemap
+        run: |
+          date=$(git log -1 --format=%cs)
+          sed -i "s|<lastmod>.*</lastmod>|<lastmod>${date}</lastmod>|" sitemap.xml
+          grep lastmod sitemap.xml
+
       # Сайт статический: собирать нечего, публикуем репозиторий как есть.
       - uses: actions/upload-pages-artifact@v3
         with:
