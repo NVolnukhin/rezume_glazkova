@@ -82,8 +82,13 @@ if (!existsSync(join(ROOT, 'CNAME'))) {
   }
 }
 
+/* Внешние хосты, которые стоят в разметке намеренно. Всё остальное, что
+   не совпадает с CNAME, — почти наверняка опечатка или забытый старый домен. */
+const EXTERNAL_HOSTS = new Set(['t.me']);
+
 for (const m of html.matchAll(/(?:content|href)="https:\/\/([a-z0-9.-]+)(\/[^"]*)?"/gi)) {
   const [, host, path = '/'] = m;
+  if (EXTERNAL_HOSTS.has(host)) continue;
   if (domain && host !== domain) {
     errors.push(`index.html ссылается на https://${host}${path}, а в CNAME домен ${domain}`);
   }
